@@ -1,11 +1,7 @@
-```{r}
-# this is a sample code
-```
-
 ---
 title: "metabolomicsProcessingDIY"
 author: 
-- "Serena"
+- "DeniseSl22"
 - "Serena-O"
 date: "28/05/24"
 output:
@@ -13,6 +9,7 @@ output:
     variant: markdown_github
 always_allow_html: true
 ---
+
 ## Introduction
 In this section of the workflow, we will obtain the metabolomics data and apply filtering options, to create a dataset ready for further statistical and pathway analysis (on Thursday).
 
