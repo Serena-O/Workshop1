@@ -1,9 +1,13 @@
+```{r}
+# this is a sample code
+```
+
 ---
 title: "metabolomicsProcessingDIY"
 author: 
-- "DeniseSl22"
-- "YourGithubUserName"
-date: "17/05/24"
+- "Serena"
+- "Serena-O"
+date: "28/05/24"
 output:
  md_document:
     variant: markdown_github
