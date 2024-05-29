@@ -30,15 +30,15 @@ rm(list=ls())
 
 
 ```{r}
-if (!requireNamespace("BiocManager", quietly = TRUE))
-  install.packages("BiocManager")
-BiocManager::install("limma")
-BiocManager::install("illuminaio")
-BiocManager::install("tidyverse")
-BiocManager::install("PCAtools")
-BiocManager::install("ggplot2")
-BiocManager::install("Biobase")
-install.packages("RColorBrewer")
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#   install.packages("BiocManager")
+# BiocManager::install("limma")
+# BiocManager::install("illuminaio")
+# BiocManager::install("tidyverse")
+# BiocManager::install("PCAtools")
+# BiocManager::install("ggplot2")
+# BiocManager::install("Biobase")
+# install.packages("RColorBrewer")
 
 
 #load required libraries
@@ -50,6 +50,19 @@ library(PCAtools)
 library(ggplot2)
 library(Biobase)
 ```
+
+# we are not going to use DESEq because it is not a sequencing data
+
+## overview of the steps
+- read in the data
+- annotations
+- we turn the data into a specific object needed for the the program
+- normalize
+- filter/annotate again
+- make a design matrix
+- fit the model based on that design
+- then we tell the program which groups we want to compare against each other
+- end up with your logfold change, p value and adjusted p value
 
 
 ```{r pressure, echo = FALSE}
@@ -64,7 +77,6 @@ library(Biobase)
   x <- data.matrix(x[,2:ncol(x)])
   rownames(x) <- probes
 ```
-
 
 
 ```{r}
@@ -119,7 +131,7 @@ targets <- read.csv('datasets/targets.csv')
 # for BeadArrays, background correction and normalisation are handled by a single function: neqc()
 # this is the same as per Agilent single colour arrays
 ```{r}
-project.bgcorrect.norm <- neqc(project, offset = 16)
+project.bgcorrect.norm <- neqc(project, offset = 16) # only for the normalization
 ```
 
 
@@ -161,16 +173,20 @@ project.bgcorrect.norm <- neqc(project, offset = 16)
 
 ```{r}
 expression_data<-as.data.frame(project.bgcorrect.norm.filt.mean[["E"]])
+
 ```
 
 
 ```{r}
-#plot the expression data (before normalisation)
+#plot the expression data (after normalisation)
 png("after norm.png", width = 1000, height = 500)
 par(mar=c(5,6,4,1)+.1)
  boxplot(expression_data, main="After background correction and normalisation",
 xlab="Samples",ylab=expression('log'[2]*'(expression)'),cex=0.5, par(cex.lab=1.5),par(cex.axis=1.5))
 dev.off()
+```
+```{r}
+detection_probe <- as.data.frame(project.bgcorrect.norm.filt.mean[['other']][['Detection']])
 ```
 
 
@@ -189,6 +205,7 @@ for (row in 1:nrow(detection_probe)){
 }
 ```
 
+# we are doing these separately because it is limma, but in DESeq, it was done all at once for us
 
 ```{r}
 #ouput the normalized data
@@ -197,8 +214,7 @@ write.table(expression_data, "normalised-data.txt", na ="", row.names=TRUE,  sep
 
 
 ```{r}
-# input normalized data, generate an ExpressionSet object for illumina analysis, extract sample name
-
+# input normalized data, generate an ExpressionSet object for illumina analysis (based on the normalized data), extract sample name
 
 trans_data <- read.table("normalised-data.txt", header = TRUE, sep = '\t', stringsAsFactors = FALSE)
 trans_matrix <- as.matrix(trans_data)
@@ -207,7 +223,7 @@ samples_name <- data.frame(sampleID = colnames(trans_data), stringsAsFactors = F
 ```
 
 ```{r}
-#extract categories for design matrix
+#extract categories for design matrix 
 Timepoint_diet <- paste(targets$Timepoint, targets$Diet, sep=".")
 Timepoint_diet<- factor(Timepoint_diet, levels=c("baseline.Ex_diet", "end.Ex_diet", "baseline.C_diet", "end.C_diet"))
 ```
@@ -215,13 +231,13 @@ Timepoint_diet<- factor(Timepoint_diet, levels=c("baseline.Ex_diet", "end.Ex_die
 
 ```{r}
 #Make design matrix and fit model
-design <- model.matrix(~0+Timepoint_diet)
+design <- model.matrix(~0+Timepoint_diet) # nothing to compare it against so you just add 0; because it is making a linear model
 colnames(design)<-levels(Timepoint_diet)
 fit <- lmFit(eset, design)
 ```
 
 ```{r}
-#Make contrast matrix 
+#Make contrast matrix to compare end vs baseline experimental and control diet; this is how we tell the program what we want to compare against each other
 cont.matrix <- makeContrasts(
   ExDiet_end_vs_baseline=end.Ex_diet-baseline.Ex_diet, 
   CDiet_end_vs_baseline=end.C_diet-baseline.C_diet,
@@ -234,9 +250,9 @@ TopTable_C_diet <- topTable(fit2, adjust.method="BH", coef="CDiet_end_vs_baselin
 
 
 
-
 ```{r}
 # Add the Entrez Gene IDs as a column to the TopTables
+# rownames_to_column turns the rownames into an additional column
 TopTable_Ex_diet <- rownames_to_column(TopTable_Ex_diet, "Entrez_ID" )
 TopTable_C_diet <- rownames_to_column(TopTable_C_diet, "Entrez_ID")
 
